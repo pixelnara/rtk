@@ -1,0 +1,22 @@
+{
+  "name": "rtk",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "sample": "node sampleData.js",
+    "pdf": "node generatePdf.js",
+    "start": "node sampleData.js && node generatePdf.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "http://local_proxy@127.0.0.1:33319/git/pixelnara/rtk"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "exceljs": "^4.4.0",
+    "pdfkit": "^0.18.0"
+  }
+}
