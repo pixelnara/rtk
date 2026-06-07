@@ -19,6 +19,7 @@ jobs:
         uses: anthropics/claude-code-action@beta
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          mode: agent
           direct_prompt: |
             오늘 반도체·AI 관련주 시장 동향을 조사해서 카카오톡으로 2개 메시지를 보내줘.
             각 메시지는 200자 이하로.
