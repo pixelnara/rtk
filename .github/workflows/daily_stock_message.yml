@@ -5,6 +5,10 @@ on:
     - cron: '52 0 * * *'   # 매일 09:52 KST
   workflow_dispatch:
 
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
   send-message:
     runs-on: ubuntu-latest
@@ -15,7 +19,7 @@ jobs:
         uses: anthropics/claude-code-action@beta
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          prompt: |
+          direct_prompt: |
             오늘 반도체·AI 관련주 시장 동향을 조사해서 카카오톡으로 2개 메시지를 보내줘.
             각 메시지는 200자 이하로.
             메시지1: 오늘의 주요 등락 이유 3가지 (이모지·수치 포함)
