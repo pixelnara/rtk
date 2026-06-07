@@ -11,21 +11,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+      - name: Send daily stock message via Claude
+        uses: anthropics/claude-code-action@beta
         with:
-          node-version: '20'
-
-      - name: Send daily stock message
-        run: node scripts/daily_message.mjs
-        env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          KAKAO_REST_API_KEY: ${{ secrets.KAKAO_REST_API_KEY }}
-          KAKAO_REFRESH_TOKEN: ${{ secrets.KAKAO_REFRESH_TOKEN }}
-
-      - name: Update refresh token if renewed
-        if: env.NEW_KAKAO_REFRESH_TOKEN != ''
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh secret set KAKAO_REFRESH_TOKEN --body "$NEW_KAKAO_REFRESH_TOKEN"
-          echo "Refresh token updated"
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          prompt: |
+            오늘 반도체·AI 관련주 시장 동향을 조사해서 카카오톡으로 2개 메시지를 보내줘.
+            각 메시지는 200자 이하로.
+            메시지1: 오늘의 주요 등락 이유 3가지 (이모지·수치 포함)
+            메시지2: 단기·중기 전망 및 주목 섹터/종목
+            반드시 KakaotalkChat-MemoChat 도구를 사용해서 전송해줘.
