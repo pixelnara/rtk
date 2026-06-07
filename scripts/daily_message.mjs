@@ -35,10 +35,43 @@ async function refreshKakaoToken() {
   return data.access_token;
 }
 
+async function fetchStockData() {
+  const symbols = {
+    '삼성전자': '005930.KS',
+    'SK하이닉스': '000660.KS',
+    '현대차': '005380.KS',
+    '엔비디아': 'NVDA',
+    'AMD': 'AMD',
+    'TSMC': 'TSM',
+  };
+
+  const results = [];
+  for (const [name, symbol] of Object.entries(symbols)) {
+    try {
+      const url = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=2d`;
+      const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
+      const data = await res.json();
+      const closes = data.chart.result[0].indicators.quote[0].close;
+      const prev = closes[closes.length - 2];
+      const curr = closes[closes.length - 1];
+      if (prev && curr) {
+        const pct = ((curr - prev) / prev * 100).toFixed(2);
+        const currency = symbol.endsWith('.KS') ? '원' : 'USD';
+        results.push(`${name}: ${curr.toLocaleString()}${currency} (${pct > 0 ? '+' : ''}${pct}%)`);
+      }
+    } catch (e) {
+      // 개별 종목 실패 시 스킵
+    }
+  }
+  return results.join('\n');
+}
+
 async function generateMessages() {
   const today = new Date().toLocaleDateString('ko-KR', {
     year: 'numeric', month: 'long', day: 'numeric', weekday: 'short',
   });
+
+  const stockData = await fetchStockData();
 
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -54,11 +87,14 @@ async function generateMessages() {
         role: 'user',
         content: `당신은 주식 선생님입니다. ${today} 아침 브리핑을 초등학생도 이해할 수 있는 쉬운 말로 작성해주세요.
 
-반도체·AI·전기차 관련 산업 트렌드(HBM, AI 인프라, 전기차 배터리, 미국 수출규제 등)를 바탕으로 작성하세요.
+오늘의 실제 주가 데이터:
+${stockData}
+
+위 실제 데이터를 바탕으로 오른 종목은 왜 올랐는지, 떨어진 종목은 왜 떨어졌는지 쉽게 설명해주세요.
 어려운 용어는 쉬운 비유로 설명하고, 짧고 재미있게 써주세요.
 
-메시지1(200자 이하): 요즘 반도체·AI·전기차 시장에서 일어나는 중요한 일 2~3가지를 이모지와 함께 아주 쉽게
-메시지2(200자 이하): 앞으로 주목할 회사나 분야 (삼성전자, SK하이닉스, 현대차, 엔비디아 등) 쉬운 이유와 함께
+메시지1(200자 이하): 오늘 주가 움직임을 이모지와 함께 아주 쉽게 (실제 수치 포함)
+메시지2(200자 이하): 앞으로 주목할 회사나 분야를 쉬운 이유와 함께
 
 반드시 아래 JSON만 반환 (다른 텍스트 없이):
 {"msg1":"...", "msg2":"..."}`,
