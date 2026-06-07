@@ -1,0 +1,31 @@
+name: Daily Stock KakaoTalk Message
+
+on:
+  schedule:
+    - cron: '52 0 * * *'   # 매일 09:52 KST
+  workflow_dispatch:
+
+jobs:
+  send-message:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Send daily stock message
+        run: node scripts/daily_message.mjs
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          KAKAO_REST_API_KEY: ${{ secrets.KAKAO_REST_API_KEY }}
+          KAKAO_REFRESH_TOKEN: ${{ secrets.KAKAO_REFRESH_TOKEN }}
+
+      - name: Update refresh token if renewed
+        if: env.NEW_KAKAO_REFRESH_TOKEN != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh secret set KAKAO_REFRESH_TOKEN --body "$NEW_KAKAO_REFRESH_TOKEN"
+          echo "Refresh token updated"
