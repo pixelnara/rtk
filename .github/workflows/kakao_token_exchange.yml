@@ -19,7 +19,6 @@ jobs:
           const params = new URLSearchParams({
             grant_type: 'authorization_code',
             client_id: '32c8ad8ebb1d0a3e76385e988deb6b3b',
-            client_secret: 'AvrWhPtml',
             redirect_uri: 'http://localhost:3000/callback',
             code: process.env.KAKAO_CODE
           });
