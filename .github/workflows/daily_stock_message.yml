@@ -2,7 +2,7 @@ name: Daily Stock KakaoTalk Message
 
 on:
   schedule:
-    - cron: '15 23 * * *'   # 매일 08:15 KST
+    - cron: '10 23 * * *'   # 매일 08:10 KST
   workflow_dispatch:
 
 permissions:
