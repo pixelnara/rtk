@@ -97,7 +97,7 @@ async function generateMessages() {
     },
     body: JSON.stringify({
       model: 'claude-haiku-4-5-20251001',
-      max_tokens: 2000,
+      max_tokens: 4000,
       messages: [{
         role: 'user',
         content: `당신은 주식 선생님입니다. ${today} 아침 브리핑을 초등학생도 이해할 수 있는 쉬운 말로 작성해주세요.
@@ -138,7 +138,9 @@ ${stockData}
   if (!res.ok) throw new Error(`Claude API 오류: ${JSON.stringify(data)}`);
 
   const text = data.content[0].text.trim();
-  const jsonMatch = text.match(/\{[\s\S]*\}/);
+  // 마크다운 코드블록 제거 후 JSON 추출
+  const cleaned = text.replace(/```json\s*/g, '').replace(/```\s*/g, '');
+  const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
   if (!jsonMatch) throw new Error(`예상치 못한 응답: ${text}`);
 
   return JSON.parse(jsonMatch[0]);
