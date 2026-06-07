@@ -14,12 +14,11 @@ jobs:
       - name: Exchange code for tokens
         env:
           KAKAO_CODE: ${{ github.event.inputs.code }}
-          KAKAO_REST_API_KEY: ${{ secrets.KAKAO_REST_API_KEY }}
         run: |
           node -e "
           const params = new URLSearchParams({
             grant_type: 'authorization_code',
-            client_id: process.env.KAKAO_REST_API_KEY,
+            client_id: '32c8ad8ebb1d0a3e76385e988deb6b3b',
             redirect_uri: 'http://localhost:3000/callback',
             code: process.env.KAKAO_CODE
           });
