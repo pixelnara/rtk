@@ -1,4 +1,5 @@
-// 매일 06:10 KST — 기술주가 떨어진 날, 반대로 오르는 종목·섹터를 카카오톡 발송
+// 하루 3회(06:10·13:10·20:10 KST) — 기술주가 떨어진 날,
+// 반대로 오르는 ① 섹터/카테고리 와 ② 개별 종목 을 카카오톡 발송
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 const KAKAO_REST_API_KEY = process.env.KAKAO_REST_API_KEY;
@@ -13,8 +14,8 @@ const TECH = {
   'QQQM (나스닥100)': 'QQQM',
 };
 
-// 반대로 오를 수 있는 후보 (섹터/방어/원자재/채권)
-const CANDIDATES = {
+// ① 섹터/카테고리 (ETF·원자재·채권)
+const SECTORS = {
   '에너지 (XLE)': 'XLE',
   '헬스케어 (XLV)': 'XLV',
   '금융 (XLF)': 'XLF',
@@ -28,6 +29,28 @@ const CANDIDATES = {
   '배당주 (SCHD)': 'SCHD',
   '미국채 20년 (TLT)': 'TLT',
   'S&P500 (VOO)': 'VOO',
+};
+
+// ② 개별 종목 (기술주와 다르게 움직이는 비기술 대형주)
+const STOCKS = {
+  '존슨앤존슨 (JNJ)': 'JNJ',
+  '일라이릴리 (LLY)': 'LLY',
+  '유나이티드헬스 (UNH)': 'UNH',
+  '머크 (MRK)': 'MRK',
+  '프록터앤갬블 (PG)': 'PG',
+  '코카콜라 (KO)': 'KO',
+  '펩시 (PEP)': 'PEP',
+  '월마트 (WMT)': 'WMT',
+  '코스트코 (COST)': 'COST',
+  '맥도날드 (MCD)': 'MCD',
+  '엑손모빌 (XOM)': 'XOM',
+  '셰브론 (CVX)': 'CVX',
+  'JP모건 (JPM)': 'JPM',
+  '버크셔 (BRK-B)': 'BRK-B',
+  '비자 (V)': 'V',
+  '넥스트에라 (NEE)': 'NEE',
+  '뉴몬트 금광 (NEM)': 'NEM',
+  '버라이즌 (VZ)': 'VZ',
 };
 
 async function refreshKakaoToken() {
@@ -70,7 +93,9 @@ async function fetchGroup(group) {
   return out;
 }
 
-async function generateMessage(techAvg, techText, candText, risersText) {
+const fmt = (arr) => arr.map(x => `${x.name}: ${x.pct > 0 ? '+' : ''}${x.pct.toFixed(2)}%`).join('\n');
+
+async function generateMessage(techAvg, techText, sectorRisers, stockRisers) {
   const today = new Date().toLocaleDateString('ko-KR', {
     year: 'numeric', month: 'long', day: 'numeric', weekday: 'short',
   });
@@ -84,29 +109,31 @@ async function generateMessage(techAvg, techText, candText, risersText) {
     },
     body: JSON.stringify({
       model: 'claude-haiku-4-5-20251001',
-      max_tokens: 2500,
+      max_tokens: 3000,
       messages: [{
         role: 'user',
-        content: `당신은 친절한 주식 선생님입니다. ${today} 새벽 브리핑을 초등학생도 이해할 수 있는 쉬운 말로 작성해주세요.
+        content: `당신은 친절한 주식 선생님입니다. ${today} 브리핑을 초등학생도 이해할 수 있는 쉬운 말로 작성해주세요.
 
 📉 기술주 평균 등락: ${techAvg.toFixed(2)}%
 [기술주 상세]
 ${techText}
 
-[다른 섹터/자산 등락]
-${candText}
+[① 섹터/카테고리 중 오른 것]
+${sectorRisers || '(오늘은 오른 섹터가 거의 없음)'}
 
-[그중 오른 것들]
-${risersText || '(오늘은 오른 섹터가 거의 없음)'}
+[② 개별 종목 중 오른 것]
+${stockRisers || '(오늘은 오른 개별 종목이 거의 없음)'}
 
 작성 규칙:
 - 제목: 오늘 기술주가 올랐는지 내렸는지 한 줄로
-- 핵심: "기술주가 떨어졌는데 반대로 오른(또는 버틴) 종목/섹터"를 골라서 쉽게 설명
-- 각 종목이 왜 반대로 움직였는지 쉬운 비유로 (예: 금은 불안할 때 사람들이 찾는 안전한 곳)
-- 기술주가 올랐다면, 그래도 함께 오른/주목할 섹터를 짚어주기
+- **두 부분으로 나눠서 작성**:
+  1) 🏷️ 반대로 오른 섹터/카테고리 — 무엇이 왜 올랐는지 쉬운 비유로
+  2) 📈 반대로 오른 개별 종목 — 회사 이름과 함께, 왜 기술주와 다르게 움직였는지 쉽게
+- 기술주가 떨어졌는데 이것들이 오른 "이유"를 강조 (예: 금은 불안할 때 찾는 안전자산, 헬스케어는 경기와 무관하게 필요 등)
+- 기술주가 올랐다면, 그래도 함께 주목할 섹터·종목을 짚어주기
 - 이모지 적극 활용
-- 투자 권유나 단정적 표현은 피하고, "참고용"임을 부드럽게 안내
-- 전체 700자 이내, 카카오톡 메시지 한 통 분량
+- 투자 권유나 단정은 피하고 "참고용"임을 부드럽게 안내
+- 전체 900자 이내, 카카오톡 메시지 한 통 분량
 
 메시지 본문만 출력 (JSON·코드블록 없이 바로 텍스트로).`,
       }],
@@ -145,16 +172,17 @@ async function main() {
   const accessToken = await refreshKakaoToken();
 
   const tech = await fetchGroup(TECH);
-  const cand = await fetchGroup(CANDIDATES);
+  const sectors = await fetchGroup(SECTORS);
+  const stocks = await fetchGroup(STOCKS);
   const techAvg = tech.length ? tech.reduce((s, x) => s + x.pct, 0) / tech.length : 0;
 
-  const fmt = (arr) => arr.map(x => `${x.name}: ${x.pct > 0 ? '+' : ''}${x.pct.toFixed(2)}%`).join('\n');
-  const risers = cand.filter(x => x.pct > 0).sort((a, b) => b.pct - a.pct);
+  const sectorRisers = sectors.filter(x => x.pct > 0).sort((a, b) => b.pct - a.pct);
+  const stockRisers = stocks.filter(x => x.pct > 0).sort((a, b) => b.pct - a.pct);
 
-  const message = await generateMessage(techAvg, fmt(tech), fmt(cand), fmt(risers));
+  const message = await generateMessage(techAvg, fmt(tech), fmt(sectorRisers), fmt(stockRisers));
 
   await sendKakaoMessage(accessToken, message);
-  console.log(`반대매매 브리핑 전송 완료 (${message.length}자, 기술주 평균 ${techAvg.toFixed(2)}%, 오른 후보 ${risers.length}개)`);
+  console.log(`반대매매 브리핑 전송 완료 (${message.length}자, 기술주 평균 ${techAvg.toFixed(2)}%, 오른 섹터 ${sectorRisers.length}개, 오른 종목 ${stockRisers.length}개)`);
 }
 
 main().catch(err => {

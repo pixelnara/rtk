@@ -2,8 +2,8 @@ name: Counter-Trend Stock KakaoTalk Message
 
 on:
   schedule:
-    # UTC 기준 (KST = UTC+9): 21:10 UTC = 06:10 KST
-    - cron: '10 21 * * *'   # 매일 오전 6시 10분 (KST)
+    # UTC 기준 (KST = UTC+9): 21:10 UTC = 06:10 KST, 04:10 UTC = 13:10 KST, 11:10 UTC = 20:10 KST
+    - cron: '10 4,11,21 * * *'   # 매일 06:10 · 13:10 · 20:10 (KST) 하루 3회
   workflow_dispatch:
 
 permissions:
