@@ -2,8 +2,10 @@ name: Daily Stock KakaoTalk Message
 
 on:
   schedule:
-    # UTC 기준 (KST = UTC+9): 23:00 UTC = 08:00 KST, 11:00 UTC = 20:00 KST
-    - cron: '0 11,23 * * *'   # 매일 오전 8시 · 오후 8시 (KST)
+    # UTC 기준 (KST = UTC+9)
+    # 21:00 UTC = 06:00 KST, 01:00 UTC = 10:00 KST, 06:00 UTC = 15:00 KST
+    # 09:00 UTC = 18:00 KST, 12:00 UTC = 21:00 KST
+    - cron: '0 1,6,9,12,21 * * *'   # 오전 6·10시, 오후 3·6·9시 (KST)
   workflow_dispatch:
 
 permissions:
