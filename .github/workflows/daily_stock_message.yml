@@ -2,7 +2,8 @@ name: Daily Stock KakaoTalk Message
 
 on:
   schedule:
-    - cron: '0 * * * *'   # 매 1시간마다 (테스트)
+    # UTC 기준 (KST = UTC+9): 23:00 UTC = 08:00 KST, 11:00 UTC = 20:00 KST
+    - cron: '0 11,23 * * *'   # 매일 오전 8시 · 오후 8시 (KST)
   workflow_dispatch:
 
 permissions:
