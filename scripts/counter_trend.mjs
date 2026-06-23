@@ -1,5 +1,5 @@
-// 하루 3회(06:10·13:10·20:10 KST) — 기술주가 떨어진 날,
-// 반대로 오르는 ① 섹터/카테고리 와 ② 개별 종목 을 카카오톡 발송
+// 하루 3회(06:10·13:10·20:10 KST) — 기술주가 떨어진 날, 반대로 오르는
+// 국내/국외 종목 5개씩 + 국내/국외 ETF 5개씩 을 카카오톡 2통으로 발송
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 const KAKAO_REST_API_KEY = process.env.KAKAO_REST_API_KEY;
@@ -14,25 +14,36 @@ const TECH = {
   'QQQM (나스닥100)': 'QQQM',
 };
 
-// ① 섹터/카테고리 (ETF·원자재·채권)
-const SECTORS = {
-  '에너지 (XLE)': 'XLE',
-  '헬스케어 (XLV)': 'XLV',
-  '금융 (XLF)': 'XLF',
-  '유틸리티 (XLU)': 'XLU',
-  '필수소비재 (XLP)': 'XLP',
-  '산업재 (XLI)': 'XLI',
-  '소재 (XLB)': 'XLB',
-  '부동산 (XLRE)': 'XLRE',
-  '금 (GLD)': 'GLD',
-  '금광주 (GDX)': 'GDX',
-  '배당주 (SCHD)': 'SCHD',
-  '미국채 20년 (TLT)': 'TLT',
-  'S&P500 (VOO)': 'VOO',
+// 국내 개별 종목 (비기술 대형주·방어주)
+const KR_STOCKS = {
+  '한국전력': '015760.KS',
+  'KT&G': '033780.KS',
+  '신한지주': '055550.KS',
+  'KB금융': '105560.KS',
+  '하나금융지주': '086790.KS',
+  '삼성생명': '032830.KS',
+  'POSCO홀딩스': '005490.KS',
+  '한국가스공사': '036460.KS',
+  'SK텔레콤': '017670.KS',
+  'KT': '030200.KS',
 };
 
-// ② 개별 종목 (기술주와 다르게 움직이는 비기술 대형주)
-const STOCKS = {
+// 국내 ETF (방어/원자재/채권/인버스)
+const KR_ETF = {
+  'KODEX 골드선물(H)': '132030.KS',
+  'TIGER 구리실물': '445910.KS',
+  'KODEX 인버스': '114800.KS',
+  'KODEX 200선물인버스2X': '252670.KS',
+  'KODEX 은행': '091170.KS',
+  'TIGER 헬스케어': '143860.KS',
+  'ARIRANG 고배당주': '161510.KS',
+  'KOSEF 국고채10년': '148070.KS',
+  'KODEX 종합채권': '273130.KS',
+  'TIGER 200에너지화학': '117460.KS',
+};
+
+// 국외(미국) 개별 종목 (비기술 대형주·방어주)
+const US_STOCKS = {
   '존슨앤존슨 (JNJ)': 'JNJ',
   '일라이릴리 (LLY)': 'LLY',
   '유나이티드헬스 (UNH)': 'UNH',
@@ -41,16 +52,26 @@ const STOCKS = {
   '코카콜라 (KO)': 'KO',
   '펩시 (PEP)': 'PEP',
   '월마트 (WMT)': 'WMT',
-  '코스트코 (COST)': 'COST',
   '맥도날드 (MCD)': 'MCD',
   '엑손모빌 (XOM)': 'XOM',
-  '셰브론 (CVX)': 'CVX',
   'JP모건 (JPM)': 'JPM',
-  '버크셔 (BRK-B)': 'BRK-B',
-  '비자 (V)': 'V',
-  '넥스트에라 (NEE)': 'NEE',
-  '뉴몬트 금광 (NEM)': 'NEM',
   '버라이즌 (VZ)': 'VZ',
+};
+
+// 국외(미국) ETF (섹터/원자재/채권/인버스)
+const US_ETF = {
+  '에너지 (XLE)': 'XLE',
+  '헬스케어 (XLV)': 'XLV',
+  '금융 (XLF)': 'XLF',
+  '유틸리티 (XLU)': 'XLU',
+  '필수소비재 (XLP)': 'XLP',
+  '금 (GLD)': 'GLD',
+  '금광주 (GDX)': 'GDX',
+  '미국채 20년 (TLT)': 'TLT',
+  '배당주 (SCHD)': 'SCHD',
+  '인버스 S&P (SH)': 'SH',
+  '소재 (XLB)': 'XLB',
+  'S&P500 (VOO)': 'VOO',
 };
 
 async function refreshKakaoToken() {
@@ -93,9 +114,11 @@ async function fetchGroup(group) {
   return out;
 }
 
+// 등락률 내림차순 상위 5개
+const top5 = (arr) => [...arr].sort((a, b) => b.pct - a.pct).slice(0, 5);
 const fmt = (arr) => arr.map(x => `${x.name}: ${x.pct > 0 ? '+' : ''}${x.pct.toFixed(2)}%`).join('\n');
 
-async function generateMessage(techAvg, techText, sectorRisers, stockRisers) {
+async function generateMessages(techAvg, techText, krStocks, krEtf, usStocks, usEtf) {
   const today = new Date().toLocaleDateString('ko-KR', {
     year: 'numeric', month: 'long', day: 'numeric', weekday: 'short',
   });
@@ -109,40 +132,50 @@ async function generateMessage(techAvg, techText, sectorRisers, stockRisers) {
     },
     body: JSON.stringify({
       model: 'claude-haiku-4-5-20251001',
-      max_tokens: 3000,
+      max_tokens: 4000,
       messages: [{
         role: 'user',
         content: `당신은 친절한 주식 선생님입니다. ${today} 브리핑을 초등학생도 이해할 수 있는 쉬운 말로 작성해주세요.
 
-📉 기술주 평균 등락: ${techAvg.toFixed(2)}%
+📉 미국 기술주 평균 등락: ${techAvg.toFixed(2)}%
 [기술주 상세]
 ${techText}
 
-[① 섹터/카테고리 중 오른 것]
-${sectorRisers || '(오늘은 오른 섹터가 거의 없음)'}
+기술주가 떨어진 날, 반대로 잘 버틴/오른 것들을 정리해야 합니다. 아래는 각 그룹의 상위 5개입니다.
 
-[② 개별 종목 중 오른 것]
-${stockRisers || '(오늘은 오른 개별 종목이 거의 없음)'}
+[국내 종목 상위 5]
+${krStocks}
+[국내 ETF 상위 5]
+${krEtf}
+[국외(미국) 종목 상위 5]
+${usStocks}
+[국외(미국) ETF 상위 5]
+${usEtf}
 
-작성 규칙:
-- 제목: 오늘 기술주가 올랐는지 내렸는지 한 줄로
-- **두 부분으로 나눠서 작성**:
-  1) 🏷️ 반대로 오른 섹터/카테고리 — 무엇이 왜 올랐는지 쉬운 비유로
-  2) 📈 반대로 오른 개별 종목 — 회사 이름과 함께, 왜 기술주와 다르게 움직였는지 쉽게
-- 기술주가 떨어졌는데 이것들이 오른 "이유"를 강조 (예: 금은 불안할 때 찾는 안전자산, 헬스케어는 경기와 무관하게 필요 등)
-- 기술주가 올랐다면, 그래도 함께 주목할 섹터·종목을 짚어주기
-- 이모지 적극 활용
-- 투자 권유나 단정은 피하고 "참고용"임을 부드럽게 안내
-- 전체 900자 이내, 카카오톡 메시지 한 통 분량
+두 개의 메시지를 작성하세요:
+- msg1 (🇰🇷 국내): 위 "국내 종목 5개"와 "국내 ETF 5개"를 각각 나열하고, 왜 기술주와 다르게 움직였는지 쉬운 비유로 설명. (인버스 ETF는 "시장이 내리면 오르도록 만든 상품"이라고 안내)
+- msg2 (🇺🇸 국외): 위 "국외 종목 5개"와 "국외 ETF 5개"를 같은 방식으로.
 
-메시지 본문만 출력 (JSON·코드블록 없이 바로 텍스트로).`,
+각 메시지 규칙:
+- 맨 위에 기술주가 올랐는지 내렸는지 한 줄
+- "종목 5개" / "ETF 5개" 소제목으로 구분, 각 줄에 등락률 표기
+- +면 왜 올랐는지, 마이너스면 "그래도 덜 빠짐"으로 솔직하게
+- 이모지 적극 활용, 투자 권유 금지, "참고용" 안내
+- 각 메시지 800자 이내
+
+반드시 아래 JSON만 반환 (다른 텍스트·코드블록 없이):
+{"msg1":"...", "msg2":"..."}`,
       }],
     }),
   });
 
   const data = await res.json();
   if (!res.ok) throw new Error(`Claude API 오류: ${JSON.stringify(data)}`);
-  return data.content[0].text.trim();
+  const text = data.content[0].text.trim();
+  const cleaned = text.replace(/```json\s*/g, '').replace(/```\s*/g, '');
+  const m = cleaned.match(/\{[\s\S]*\}/);
+  if (!m) throw new Error(`예상치 못한 응답: ${text}`);
+  return JSON.parse(m[0]);
 }
 
 async function sendKakaoMessage(accessToken, message) {
@@ -172,17 +205,24 @@ async function main() {
   const accessToken = await refreshKakaoToken();
 
   const tech = await fetchGroup(TECH);
-  const sectors = await fetchGroup(SECTORS);
-  const stocks = await fetchGroup(STOCKS);
+  const krStocks = await fetchGroup(KR_STOCKS);
+  const krEtf = await fetchGroup(KR_ETF);
+  const usStocks = await fetchGroup(US_STOCKS);
+  const usEtf = await fetchGroup(US_ETF);
   const techAvg = tech.length ? tech.reduce((s, x) => s + x.pct, 0) / tech.length : 0;
 
-  const sectorRisers = sectors.filter(x => x.pct > 0).sort((a, b) => b.pct - a.pct);
-  const stockRisers = stocks.filter(x => x.pct > 0).sort((a, b) => b.pct - a.pct);
+  const { msg1, msg2 } = await generateMessages(
+    techAvg, fmt(tech),
+    fmt(top5(krStocks)), fmt(top5(krEtf)),
+    fmt(top5(usStocks)), fmt(top5(usEtf)),
+  );
 
-  const message = await generateMessage(techAvg, fmt(tech), fmt(sectorRisers), fmt(stockRisers));
-
-  await sendKakaoMessage(accessToken, message);
-  console.log(`반대매매 브리핑 전송 완료 (${message.length}자, 기술주 평균 ${techAvg.toFixed(2)}%, 오른 섹터 ${sectorRisers.length}개, 오른 종목 ${stockRisers.length}개)`);
+  await sendKakaoMessage(accessToken, msg1);
+  console.log(`국내 메시지 전송 완료 (${msg1.length}자)`);
+  await new Promise(r => setTimeout(r, 1000));
+  await sendKakaoMessage(accessToken, msg2);
+  console.log(`국외 메시지 전송 완료 (${msg2.length}자)`);
+  console.log(`기술주 평균 ${techAvg.toFixed(2)}%`);
 }
 
 main().catch(err => {
