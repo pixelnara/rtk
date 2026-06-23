@@ -1,0 +1,28 @@
+name: Counter-Trend Stock KakaoTalk Message
+
+on:
+  schedule:
+    # UTC 기준 (KST = UTC+9): 21:10 UTC = 06:10 KST
+    - cron: '10 21 * * *'   # 매일 오전 6시 10분 (KST)
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  send-message:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Send counter-trend message
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          KAKAO_REST_API_KEY: ${{ secrets.KAKAO_REST_API_KEY }}
+          KAKAO_REFRESH_TOKEN: ${{ secrets.KAKAO_REFRESH_TOKEN }}
+        run: node scripts/counter_trend.mjs
