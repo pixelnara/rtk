@@ -87,6 +87,17 @@ async function refreshKakaoToken() {
   });
   const data = await res.json();
   if (!res.ok) throw new Error(`카카오 토큰 갱신 실패: ${JSON.stringify(data)}`);
+
+  // 새 refresh_token이 발급되면 GITHUB_ENV로 내보내 워크플로가 Secret을 갱신
+  if (data.refresh_token) {
+    console.log('::notice::새 refresh_token 발급됨 — GitHub Secret 자동 갱신 시도');
+    const envFile = process.env.GITHUB_ENV;
+    if (envFile) {
+      const { appendFileSync } = await import('fs');
+      appendFileSync(envFile, `NEW_KAKAO_REFRESH_TOKEN=${data.refresh_token}\n`);
+    }
+  }
+
   return data.access_token;
 }
 

@@ -28,3 +28,18 @@ jobs:
           KAKAO_REST_API_KEY: ${{ secrets.KAKAO_REST_API_KEY }}
           KAKAO_REFRESH_TOKEN: ${{ secrets.KAKAO_REFRESH_TOKEN }}
         run: node scripts/daily_message.mjs
+
+      # 카카오가 새 refresh_token을 발급하면 GitHub Secret 자동 갱신 (장기 안정성)
+      # GH_PAT: secrets 쓰기 권한 있는 PAT 필요 (없으면 이 단계만 건너뜀, 발송엔 영향 없음)
+      - name: Persist new Kakao refresh token (if renewed)
+        if: env.NEW_KAKAO_REFRESH_TOKEN != ''
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+        run: |
+          if [ -z "$GH_TOKEN" ]; then
+            echo "⚠️ GH_PAT 미설정 — 토큰 자동 저장 건너뜀 (KAKAO_REFRESH_TOKEN 수동 갱신 필요)"
+            exit 0
+          fi
+          gh secret set KAKAO_REFRESH_TOKEN --repo "$GITHUB_REPOSITORY" --body "$NEW_KAKAO_REFRESH_TOKEN"
+          echo "✅ KAKAO_REFRESH_TOKEN 자동 갱신됨"
